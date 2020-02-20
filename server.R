@@ -62,7 +62,7 @@ shinyServer(function(input, output) {
         # Copy the report file and Style file to a temporary directory before 
         # processing it, in case we don't have write permissions to the current 
         # working dir (which can happen when deployed).
-        for(file_to_move in c("test2.Rmd", "stylesdoc.docx")){
+        for(file_to_move in c("roosts.Rmd", "stylesdoc.docx")){
           temp <- file.path(tempdir(), file_to_move) 
           file.copy(file_to_move, temp, overwrite = TRUE)
         }
@@ -91,7 +91,7 @@ shinyServer(function(input, output) {
         # Knit the document, passing in the `params` list, and eval it in a
         # child of the global environment (this isolates the code in the document
         # from the code in this app).
-        rmarkdown::render(file.path(tempdir(), "test2.Rmd"),
+        rmarkdown::render(file.path(tempdir(), "roosts.Rmd"),
                           output_file = file,
                           params = params,
                           envir = new.env(parent = globalenv()))

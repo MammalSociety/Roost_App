@@ -41,12 +41,12 @@ library(tidyverse)
 ```{r}
 
 #When working from RMD use these to load proforma and master, hash out when done
-proforma <- read.csv("proforma.csv", header = TRUE)
-master <- read.csv("master.csv", header = TRUE)
+#proforma <- read.csv("proforma.csv", header = TRUE)
+#master <- read.csv("master.csv", header = TRUE)
 
-#When working from Shiny app use these to load proforma and mastter, hash out when in RMD
-#proforma <- params$n #this works from desktop
-#master <- params$m #this works from desktop
+#When working from Shiny app use these to load proforma and master, hash out when in RMD
+proforma <- params$n #this works from desktop
+master <- params$m #this works from desktop
 
 #Create separate columns for day, month and year
 masteredit <- master
@@ -130,21 +130,21 @@ postbreeding <- alldatanozeros %>%
 #Want peak count within year and median count across years
 #get highest count for each year
 prebreedingmax <- prebreeding %>%
-  group_by(X1kmGR, Species, year) %>%
+  group_by(gridref, Species, year) %>%
   summarise(max = max(TotalCount))
 
 #take the median count for each location
 prebreedingmedian <- prebreedingmax %>%
-  group_by(X1kmGR, Species) %>%
+  group_by(gridref, Species) %>%
   summarise(median = median(max))
 
 #do same for postbreeding data
 postbreedingmax <- postbreeding %>%
-  group_by(X1kmGR, Species, year) %>%
+  group_by(gridref, Species, year) %>%
   summarise(max = max(TotalCount))
 
 postbreedingmedian <- postbreedingmax %>%
-  group_by(X1kmGR, Species) %>%
+  group_by(gridref, Species) %>%
   summarise(median = median(max))
 
 ```
@@ -442,143 +442,3 @@ WILL HAVE SPECIFIC THINGS FROM PROFORMA THAT GET SUBSETTED OUT E.G IF THEIR
 STRUCTURE IS A HOUSE, IT WILL LOOK AT ALL WITH HOUSE ETC. USERS MAY BE ABLE TO
 SELECT WHICH COLUMNS THEY FILTER FOR E.G. WHETHER TO ALSO FILTER FOR REGION, 
 CERTAIN MONTHS ETC.
-
-For the purpose of this test report, the subset used is based on the data in the
-test proforma. 
-Species: `r proforma$Species`
-Structure Type: `r proforma$StructureType`
-Region: `r proforma$Region`
-Month: March, April and May (not automatically pulled from proforma)
-
-```{r}
-
-#newmastercopy <- newmaster
-#newmastercopy$SurveyDate <- NULL
-#newmastercopy[newmastercopy == ""] <- NA
-#newmastercopy <- na.omit(newmastercopy)
-
-# Would this work if instead of putting 'House' put proforma$StructureType?
-#structureregionmonth <- newmastercopy %>%
-#  filter(StructureType == "House") %>%
-#  filter(Region == "South West") %>%
-#  filter(month == 3 | month == 4 | month == 5) 
-```
-
-```{r}
-# Percentiles for the subsetted data
-
-#srm <- structureregionmonth 
-#srm$percentiles <- ecdf(srm$TotalCount)(srm$TotalCount)*100
-
-#srm$percentileswhole <- lapply(srm$percentiles, as.integer)
-
-
-#Percentiles2 <- srm$TotalCount
-#Percentiles2.rank <- rank(Percentiles2, ties.method="min")
-#srm$percentiles2 <- round(Percentiles2.rank/length(Percentiles2.rank)*100)
-
-#sq0 <- quantile(srm$TotalCount, c(.0))
-#sq1 <- quantile(srm$TotalCount, c(.20))
-#sq2 <- quantile(srm$TotalCount, c(.40))
-#sq3 <- quantile(srm$TotalCount, c(.60))
-#sq4 <- quantile(srm$TotalCount, c(.80))
-
-#Create percentile rank column
-#srm <- srm%>%
-#  mutate(
-#    percentilerank = case_when(
-#      percentiles2 >= sq0 & percentiles2 < sq1 ~ "low",
-#      percentiles2 >= sq1 & percentiles2 < sq2 ~ "low/moderate",
-#      percentiles2 >= sq2 & percentiles2 < sq3 ~ "moderate",
-#      percentiles2 >= sq3 & percentiles2 < sq4 ~ "moderate/high",
-#      percentiles2 >= sq4 ~ "high",
-#  
-#    )
-#  )
-
-
-#Pull out percentile rank of proforma row from newmaster
-#srmproforma <- proforma
-
-#srmproforma$percentiles <- ecdf(srm$TotalCount)(srmproforma$TotalCount)*100
-#srmproforma$percentileswhole <- lapply(srmproforma$percentiles, as.integer)
-
-#Percentiles2 <- srmproforma$TotalCount
-#Percentiles2.rank <- rank(Percentiles2, ties.method="min")
-#srmproforma$percentiles2 <- #round(Percentiles2.rank/length(Percentiles2.rank)*100)
-
-#srmproforma <- srmproforma%>%
-#  mutate(
-#    percentilerank = case_when(
-#      percentilessub >= q0 & percentilessub < q1 ~ "low",
-#      percentilessub >= q1 & percentilessub < q2 ~ "low/moderate",
-#      percentilessub >= q2 & percentilessub < q3 ~ "moderate",
-#      percentilessub >= q3 & percentilessub < q4 ~ "moderate/high",
-#      percentilessub >= q4 ~ "high",
-#  
-#    )
-#  )
-
-#make a column listing the refrange
-#ps$refrange <- nrow(ps)
-
-#make column in proforma of percentile when using this subset
-
-
-
-
-```
-
-Your roost is the **`r srmproforma$percentileswhole`th percentile** when compared to the **`r unique(srm$refrange)`** bat roosts in the dataset. This means your roost is ranked as a **`r srmproforma$percentilerank`** number of bats.
-
-```{r}
-
-#ggplot(structureregionmonth, aes(x="TotalCount", y=TotalCount))+geom_boxplot()+
-#  geom_point(
-#    data=proforma,
-#    aes(x="TotalCount", y=TotalCount), 
-#    color="red", size=5
-#  )
-
-
-```
-
-# Figure 5: 
-A boxplot showing the proforma total count against other roots of the same species, structure type, region and season. 
-
-```{r}
-
-#ggplot(srm, aes(x="percentiles", y=percentiles))+geom_boxplot()+
-#  geom_point(
-#    data=srmproforma,
-#    aes(x="percentiles", y=percentiles), 
-#    color="red", size=5
-#  )
-
-
-```
-
-```{r}
-
-#FINAL COMMAND OF REPORT NEEDS TO BE SAVING NEWMASTER AS THE MASTER
-#CAREFUL WITH DOING THIS NOW BECAUSE THEN PROFORMA WILL BE DOUBLED WHEN RETESTING
-#BECAUSE WILL BE SAVED IN MASTER.
-
-#write.csv(newmaster, "./master.csv", row.names = FALSE)
-
-
-```
-
-
-### Appendix 1
-This will explain why counts of 0 have not been included in the main report and will repeat some of the key data - maybe all of it, with 0s included. 
-
-
-
-
-**Thank you for using the Ecobat Roost Analysis! If you have any questions please email info@themammalsociety.org**
-
-
-
-
-
