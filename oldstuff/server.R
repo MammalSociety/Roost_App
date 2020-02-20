@@ -10,10 +10,7 @@ library(rcompanion)
 library(suncalc)
 library(ggforce)
 library(janitor)
-library(rdrop2)
 
-#connect to the dropbox account
-drop_auth(rdstoken = "droptoken.rds")
 
 options(shiny.maxRequestSize=50*1024^2)
 # the default file size limit is 5MB, the above code ups it to 50MB
@@ -74,7 +71,7 @@ shinyServer(function(input, output) {
         # this code is responsible for passing the data to Rmd.
         dataa <- input$file #tells R Markdown where it can find data
         datab <- read.csv(dataa$datapath, header=TRUE)
-        datac <- drop_read_csv("roosts/master.csv", header = TRUE)
+        datac <- read.csv("master.csv", header=TRUE)
         #tells Rmd where to read 
         #the data from
       #  ##author <- input$Author #tells Rmd what to use as Author

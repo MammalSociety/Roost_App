@@ -35,12 +35,6 @@ library(reshape2) #graphs
 library(dplyr) #data wrangling (except percentiles)
 library(magrittr) #piping
 library(tidyverse)
-library(rdrop2)
-
-#When testing unhash this
-#drop_auth(rdstoken = "droptoken.rds")
-#drop_acc()
-
 ```
 
 
@@ -48,11 +42,11 @@ library(rdrop2)
 
 #When working from RMD use these to load proforma and master, hash out when done
 #proforma <- read.csv("proforma.csv", header = TRUE)
-#master <- drop_read_csv("roosts/master.csv")
+#master <- read.csv("master.csv", header = TRUE)
 
 #When working from Shiny app use these to load proforma and master, hash out when in RMD
 proforma <- params$n #this works from desktop
-master <- params$m
+master <- params$m #this works from desktop
 
 #Create separate columns for day, month and year
 masteredit <- master
@@ -429,10 +423,8 @@ A boxplot showing where your data lies in relation to all other roost data (left
 
 
 ```{r}
-#upload new master into dropbox to replace master - need to make sure it overwrites current master when it does this.
-write.csv(newmaster, "master.csv")
-#drop_delete("roosts/master.csv")
-drop_upload("master.csv", path = "roosts")
+
+
 
 ```
 

@@ -7,9 +7,6 @@ library(pander)
 library(dplyr)
 library(tidyr)
 library(rcompanion)
-library(rdrop2)
-
-drop_auth(rdstoken = "droptoken.rds")
 
 ui<-(fluidPage( #fluidpage means page width determined by window size
   titlePanel("Ecobat Roost Analysis"), #title of Shiny app

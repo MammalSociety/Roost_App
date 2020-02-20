@@ -1,2 +1,4 @@
 master.csv
 proforma.csv
+droptoken.rds
+.httr-oauth
