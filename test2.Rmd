@@ -1,0 +1,584 @@
+---
+title: "Bat Roost Analysis"
+author: "TBC"
+date: "07/02/2020"
+output: word_document
+params: 
+  n: NA
+  m: NA
+
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, comment = NULL)
+
+#NOTE FINAL BIT OF CODE SHOULD BE RESAVING NEWMASTER AS MASTER AGAIN SO PROFORMA IS ADDED TO MASTER FILE READY TO BEGIN AGAIN WITH NEXT PROFORMA!
+
+```
+
+
+
+```{r libraries}
+
+#copied and pased from Ecobat nightly
+library(rmarkdown)
+library(ggplot2)
+library(knitr)
+library(pander)
+library(plyr)
+library(rcompanion)
+library(tidyr)
+library(lubridate)
+library(ggforce)
+library(reshape2) #graphs
+library(dplyr) #data wrangling (except percentiles)
+library(magrittr) #piping
+library(tidyverse)
+```
+
+
+```{r}
+
+#When working from RMD use these to load proforma and master, hash out when done
+proforma <- read.csv("proforma.csv", header = TRUE)
+master <- read.csv("master.csv", header = TRUE)
+
+#When working from Shiny app use these to load proforma and mastter, hash out when in RMD
+#proforma <- params$n #this works from desktop
+#master <- params$m #this works from desktop
+
+#Create separate columns for day, month and year
+masteredit <- master
+#tells it that date in a2 is formatted dmy not ymd
+masteredit$SurveyDate <- lubridate::dmy(masteredit$SurveyDate)
+masteredit2 <- masteredit %>%
+  dplyr::mutate(day = lubridate::day(SurveyDate), 
+                month = lubridate::month(SurveyDate), 
+                year = lubridate::year(SurveyDate))
+master <- masteredit2
+
+#Create separate columns for day, month, year
+proformaedit <- proforma
+proformaedit$SurveyDate <- lubridate::dmy(proformaedit$SurveyDate)
+proformaedit2 <- proformaedit %>%
+  dplyr::mutate(day = lubridate::day(SurveyDate), 
+                month = lubridate::month(SurveyDate), 
+                year = lubridate::year(SurveyDate))
+proforma <- proformaedit2
+
+#Bind the files together
+newmaster <- rbind(master, proforma)
+
+newmastercopy <- newmaster
+newmastercopy$SurveyDate <- NULL
+newmastercopy[newmastercopy == ""] <- NA
+newmastercopy <- na.omit(newmastercopy)
+
+#Take any rows containing blank data out of newmaster
+withoutblanks <- newmastercopy
+withoutblanks[withoutblanks == ""] <- NA
+withoutblanks2 <- na.omit(withoutblanks)
+
+#Calculating percentiles
+#get rid of rows where TotalCount = 0 - we are not including 0 data in percentiles, may provide an appendix with results which include data with 0s in it.
+ alldatanozeros <- filter(withoutblanks2, TotalCount > 0)
+
+referencerange <- nrow(alldatanozeros) 
+
+```
+# Summary
+
+A total count of **`r proforma$TotalCount` `r proforma$Species`** were found at a **`r proforma$StructureType`** roost on **`r proforma$SurveyDate`** in **`r proforma$County`, `r proforma$Region`, `r proforma$Country`**.
+
+```{r}
+#General set up for tables and graphs in report, need to tweak for this
+
+## GRAPHICS ##
+# get a colour-blind friendly colour palette for graphs
+#colourCount <- length(unique(All_data$Spp))
+#getPalette <- colorRampPalette(brewer.pal(9, "RdBu"))
+# set colour palette for activity levels in graphs
+#cbbPalette <- c("#D55E00", "#0072B2","#56B4E9","#009E73","#E69F00") 
+```
+# Section 1: All data
+
+
+```{r}
+#Get desired subsets to use from newmaster, need:
+# (1) Prebreeding dataset from Jan to June, later will need 'if' for babies is no
+# (2) Need Postbredding dataset July to June with 'if' for babies is yes
+# (3) For pre and post, subset with peak counts for same location acorss years with median across months
+
+#Create dataset containing only data when month is Jan to June (or if the column
+#about babies flying says no but can't really do that until the column is there
+#so leave this out for now)
+
+#filter so only months Jan - June 
+prebreeding <- alldatanozeros %>%
+  filter(month == 1 | month == 2 | month == 3 | month == 4 | month == 5 | month == 6)
+#when have column for babies will add to the end of 6) %>% then new line
+#filter(Column name for that == 'No') 
+
+#filter so only July to December
+postbreeding <- alldatanozeros %>%
+  filter(month == 7 | month == 8 | month == 9 | month == 10 | month == 11 | month == 12)
+#when have column for babies will add to the end of 6) %>% then new line filter(Column name for that == 'Yes') 
+
+#will also be an #Unsure' option but think if don't specify will just default to the correct month anyway.
+
+#Want peak count within year and median count across years
+#get highest count for each year
+prebreedingmax <- prebreeding %>%
+  group_by(X1kmGR, Species, year) %>%
+  summarise(max = max(TotalCount))
+
+#take the median count for each location
+prebreedingmedian <- prebreedingmax %>%
+  group_by(X1kmGR, Species) %>%
+  summarise(median = median(max))
+
+#do same for postbreeding data
+postbreedingmax <- postbreeding %>%
+  group_by(X1kmGR, Species, year) %>%
+  summarise(max = max(TotalCount))
+
+postbreedingmedian <- postbreedingmax %>%
+  group_by(X1kmGR, Species) %>%
+  summarise(median = median(max))
+
+```
+
+
+
+```{r}
+#Graph 1: Natterer's all roost count by month (x-axis=month, y-axis=count)
+#Subset master to have SurveyDate, Year, Month, Day and TotalCount
+
+#Want a panel with two boxplots, one of all data and one of just the pre or post breeding data depending on the date the roost in the proforma was made
+
+#Proforma also needs a column called median so you can plot the point, this column needs to be the same as TotalCount
+proforma$median <- proforma$TotalCount
+
+
+alldatatotalcount <- subset(alldatanozeros, select = c(TotalCount, year, month, day))
+#Change data with blank space to NA (does not include 0 data)
+
+par(mfrow = c(2, 1)) #not sure this is doing anything atm - check when knit
+
+ggplot(alldatatotalcount, aes(x="Total Count", y=TotalCount))+geom_boxplot()+
+  geom_point(
+    data=proforma,
+    aes(x="Total Count", y=TotalCount), 
+    color="red", size=5
+  )
+ 
+
+#This is not working at the moment - saying if month is 1-6 use prebreeding data, if month 7-12 in proforma data is postbreeding.
+
+if(proforma$month == 1 | 2 | 3 | 5 | 6) {
+  ggplot(prebreedingmedian, aes(x="Median Prebreeding Count", y=median))+
+    geom_boxplot() +
+    geom_point(
+      data=proforma,
+      aes(x="Median Prebreeding Count", y=median), 
+      colour="red", size=5
+    )
+} else {
+   ggplot(postbreedingmedian, aes(x="Median Prebreeding Count", y=median))+
+    geom_boxplot() +
+    geom_point(
+      data=proforma,
+      aes(x="Median Prebreeding Count", y=median), 
+      colour="red", size=5
+    )
+  
+}
+
+#Need to add a label to the proforma point on the graph but do this later, along with getting them into just one panel
+
+
+```
+
+### Figure 1:
+A boxplot of where your TotalCount sits in relation to all the roost counts in the database. The lower line of the box is the lower quartile value and the top line of the box is the upper quartile. The median is the horizobntal black line in the box. The black dots are outliers and the red dot is your roost count of `r proforma$TotalCount`
+On the right is  a subset of the roost data contained in the database. If your roost count was recorded in the months of January and June OR you selected 'No' in the column asking if you think babies are flying then this will be all the prebreeding data (Jan - Jun or where answer to this question was negative.) If you answered Yes or your data was recorded July - August, you will see a subset of post breeding data. Your data is the red dot. 
+
+
+```{r}
+#Number of roosts across each month, can't do this for pre and post breeding because the way I work those values out cuts out the months (see above) only thing could do is plot months 1-6 or 7-12 but seems pointless when already in this graph. Struggling to get a red dot on.
+
+#Add red dots for where proforma value is
+
+boxplot(alldatatotalcount$TotalCount ~ alldatatotalcount$month, xlab = "Month", ylab = "Total Count of Bats in Roost") 
+
+
+#What I've tried so far, not erroring but point is not showing on graph :+geom_point(aes(proforma$TotalCount ~ proforma$month, xlab = "Month", ylab = "Total Count of Bats in Roost", color="red", size=5))
+  
+
+```
+
+### Figure 2: 
+A boxplot showing total count of bats in roosts per month across all years.
+
+
+
+```{r}
+#Plot a boxplot of roost count by structure
+allstructures <- subset(alldatanozeros, select = c(TotalCount, StructureType, year, month, day))
+
+
+#trying to replicate a graph from Ecobat code - very pretty looking graph (woo) need to work on getting giving the y axis more space - rather than downsizing x axis text need to make size of plot bigger
+graphbox<-ggplot(allstructures, aes(x=StructureType, y=TotalCount)) + 
+  geom_boxplot(allstructures, mapping = aes(fill=allstructures$StructureType))+
+  xlab("Structure")+
+  ylab("Bat Count")+
+  scale_x_discrete(drop=TRUE) +
+  scale_y_continuous(breaks=seq(0,10,20)) +
+  expand_limits(y=c(0,200))+
+  theme_bw() +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_rect(linetype="blank"),
+        axis.line=element_line(size=0.5, colour="black",
+                               linetype="solid"),
+        axis.title.x=element_text(size=18),
+        axis.text.x  = element_text(angle=90, face="italic",
+                                    size=8, hjust=1, vjust=0),
+        axis.text.y  = element_text(size=12),
+        axis.line.x = element_line(color="black", size = 0.5),
+        axis.line.y = element_line(color="black", size = 0.5),
+        axis.title.y=element_text(size=16),
+        legend.position="none")
+graphbox
+
+
+
+
+
+
+
+```
+
+### Figure 3: 
+Boxplots of total bat count in roosts split by structure type of the roost for all roost counts in database. 
+
+``` {r}
+
+alldatapercentiles <- alldatanozeros
+alldatapercentiles$percentilesall <- ecdf(alldatapercentiles$TotalCount)(alldatapercentiles$TotalCount)*100
+
+alldatapercentiles$percentileswholeall <- lapply(alldatapercentiles$percentilesall, as.integer)
+
+#Don't need this atm but keep incase
+#Percentiles2 <- alldatapercentiles$TotalCount
+#Percentiles2.rank <- rank(Percentiles2, ties.method="min")
+#alldatapercentiles$percentiles2 <- round(Percentiles2.rank/length(Percentiles2.rank)*100)
+
+q0 <- quantile(alldatapercentiles$TotalCount, c(.0))
+q1 <- quantile(alldatapercentiles$TotalCount, c(.20))
+q2 <- quantile(alldatapercentiles$TotalCount, c(.40))
+q3 <- quantile(alldatapercentiles$TotalCount, c(.60))
+q4 <- quantile(alldatapercentiles$TotalCount, c(.80))
+q5 <- quantile(alldatapercentiles$TotalCount, c(.95))
+
+#Create percentile rank column
+alldatapercentiles <- alldatapercentiles%>%
+  mutate(
+    percentilerankall = case_when(
+      percentilesall >= q0 & percentilesall < q1 ~ "low",
+      percentilesall >= q1 & percentilesall < q2 ~ "low/moderate",
+      percentilesall >= q2 & percentilesall < q3 ~ "moderate",
+      percentilesall >= q3 & percentilesall < q4 ~ "moderate/high",
+      percentilesall >= q4 & percentilesall < q5 ~ "high",
+      percentilesall >= q5 ~ "exceptional",
+  
+    )
+  )
+
+
+#Pull out percentile rank of proforma row from newmaster
+proforma$percentilesall <- ecdf(alldatapercentiles$TotalCount)(proforma$TotalCount)*100
+proforma$percentileswholeall <- lapply(proforma$percentilesall, as.integer)
+
+#Percentiles2 <- proforma$TotalCount
+#Percentiles2.rank <- rank(Percentiles2, ties.method="min")
+#proforma$percentiles2 <- round(Percentiles2.rank/length(Percentiles2.rank)*100)
+
+
+proforma <- proforma%>%
+  mutate(
+    percentilerankall = case_when(
+      percentilesall >= q0 & percentilesall < q1 ~ "low",
+      percentilesall >= q1 & percentilesall < q2 ~ "low/moderate",
+      percentilesall >= q2 & percentilesall < q3 ~ "moderate",
+      percentilesall >= q3 & percentilesall < q4 ~ "moderate/high",
+      percentilesall >= q4 & percentilesall < q5 ~ "high",
+      percentilesall >= q5 ~ "exceptional",
+  
+    )
+  )
+
+#make a column listing the refrange
+alldatapercentiles$refrange <- nrow(alldatapercentiles)
+
+#Now do the same again but with a subset of the data and need something in their saying if month of proforma is 1-6 use prebreeding, else use post
+
+#when first tried, created two percentilesubset dataframes, both identical to prebreedingmedian, think have fixed but check if this is still happening - will have add in an and when have the baby flying category.
+
+if (proforma$month == 1 | 2 | 3 | 4 | 5 | 6) {
+  ps <- prebreedingmedian #ps = percentile subset
+} else {ps <- postbreedingmedian}
+
+#now do same for percentilesubset as did for one with all data to make percentiles and percentiles of new proforma df or row within proforma.
+
+ps$percentilessub <- ecdf(ps$median)(ps$median)*100
+ps$percentileswholesub <- lapply(ps$percentilessub, as.integer)
+
+#create the ranks, qs = quartile subset
+qs0 <- quantile(ps$median, c(.0))
+qs1 <- quantile(ps$median, c(.20))
+qs2 <- quantile(ps$median, c(.40))
+qs3 <- quantile(ps$median, c(.60))
+qs4 <- quantile(ps$median, c(.80))
+qs5 <- quantile(ps$median, c(.100))
+
+#Create percentile rank column
+ps <- ps%>%
+  mutate(
+    percentileranksub = case_when(
+      percentilessub >= qs0 & percentilessub < qs1 ~ "low",
+      percentilessub >= qs1 & percentilessub < qs2 ~ "low/moderate",
+      percentilessub >= qs2 & percentilessub < qs3 ~ "moderate",
+      percentilessub >= qs3 & percentilessub < qs4 ~ "moderate/high",
+      percentilessub >= qs4 & percentilessub < qs5 ~ "high",
+      percentilessub >= qs5 ~ "exceptional",
+  
+    )
+  )
+
+ps$refrange <- nrow(ps)
+
+#create column with subset percentile of proforma, 
+proforma$percentilessub <- ecdf(ps$median)(proforma$median)*100
+proforma$percentileswholesub <- lapply(proforma$percentilessub, as.integer)
+
+#create subset rank for proforma
+proforma <- proforma%>%
+  mutate(
+    percentileranksub = case_when(
+      percentilessub >= qs0 & percentilessub < qs1 ~ "low",
+      percentilessub >= qs1 & percentilessub < qs2 ~ "low/moderate",
+      percentilessub >= qs2 & percentilessub < qs3 ~ "moderate",
+      percentilessub >= qs3 & percentilessub < qs4 ~ "moderate/high",
+      percentilessub >= qs4 & percentilessub < qs5 ~ "high",
+      percentilessub >= qs5 ~ "exceptional",
+  
+    )
+  )
+
+```
+
+# Percentiles Analysis
+
+This analysis looks at the relative size of the bat roost you recorded. We take your total count of bats at the roost recorded and compare this to values in our reference database. We tell you what percentile your data falls at, and therefore what the relative activity level is. 
+
+Roosts in the database are ranked based on their percentile score into a **low, low/moderate, moderate, moderate/high** and **high** number of bats in a roost. 
+
+*All data**
+Your roost is the **`r proforma$percentileswhole`th percentile** when compared to the **`r unique(alldatapercentiles$refrange)`** bat roosts in the dataset. This means your roost is ranked as a **`r proforma$percentilerank`** number of bats.
+
+**Breeding subset**
+This compares your data to a subet of the Ecobat roost data based on the time of year your count was recorded and so whether your roost was recorded pre- or post- young bats flying. If your roost count was recorded in **January - June** OR you selected **no** in the proforma column Do you think young are flying? then your data is compared to our prebreeding data (January to June). 
+If your recording was from **July - December** OR you selected **yes** in the proforma column "do you think young are flying" then your data is compared to our postbreeding data (July - December).
+If you answered **unsure** in the column "do you think young are flying" then Ecobat will select the subset based on the month of recording. 
+
+Your roost is the **`r proforma$percentileswholesub`th percentile** when compared to the **`r unique(ps$refrange)`** bat roosts in the dataset. This means your roost is ranked as a **`r proforma$percentileranksub`** number of bats.
+
+```{r}
+#try to create a panel of two boxplots, one showing percentile for all data and one for the subset
+
+par(mfrow = c(2, 1)) #not sure this is doing anything atm - check when knit
+
+#plot of all percentiles from the df containing all data
+ggplot(alldatapercentiles, aes(x="percentiles", y=percentilesall))+geom_boxplot()+
+  geom_point(
+    data=proforma,
+    aes(x="percentiles", y=percentilesall), 
+    color="red", size=5
+  )
+
+#plot of subset of percentiles from either pre- or post- breeding subset
+ggplot(ps, aes(x="percentiles", y=percentilessub))+geom_boxplot()+
+  geom_point(
+    data=proforma,
+    aes(x="percentiles", y=percentilessub), 
+    color="red", size=5
+  )
+
+
+```
+### Figure 4: 
+A boxplot showing where your data lies in relation to all other roost data (left) and a boxplot showing where your data lies in relation to a subset of data based on month of recording and whether you think young bats are flying (right). Values are the percentile values. 
+
+
+```{r}
+
+
+
+```
+
+
+
+
+```{r}
+
+```
+# Section 2: A subset Have not edited beyond this point since 12/02/2020, this needs to be incorporated into the subset including pre and post breeding but leaving for now - fear that if data is narrowed much more there won't be much to compare!
+The following section will now use a subset of roosts held in the database, 
+specified by you. 
+
+WILL HAVE SPECIFIC THINGS FROM PROFORMA THAT GET SUBSETTED OUT E.G IF THEIR
+STRUCTURE IS A HOUSE, IT WILL LOOK AT ALL WITH HOUSE ETC. USERS MAY BE ABLE TO
+SELECT WHICH COLUMNS THEY FILTER FOR E.G. WHETHER TO ALSO FILTER FOR REGION, 
+CERTAIN MONTHS ETC.
+
+For the purpose of this test report, the subset used is based on the data in the
+test proforma. 
+Species: `r proforma$Species`
+Structure Type: `r proforma$StructureType`
+Region: `r proforma$Region`
+Month: March, April and May (not automatically pulled from proforma)
+
+```{r}
+
+newmastercopy <- newmaster
+newmastercopy$SurveyDate <- NULL
+newmastercopy[newmastercopy == ""] <- NA
+newmastercopy <- na.omit(newmastercopy)
+
+# Would this work if instead of putting 'House' put proforma$StructureType?
+structureregionmonth <- newmastercopy %>%
+  filter(StructureType == "House") %>%
+  filter(Region == "South West") %>%
+  filter(month == 3 | month == 4 | month == 5) 
+```
+
+```{r}
+# Percentiles for the subsetted data
+
+srm <- structureregionmonth 
+srm$percentiles <- ecdf(srm$TotalCount)(srm$TotalCount)*100
+
+srm$percentileswhole <- lapply(srm$percentiles, as.integer)
+
+
+Percentiles2 <- srm$TotalCount
+Percentiles2.rank <- rank(Percentiles2, ties.method="min")
+srm$percentiles2 <- round(Percentiles2.rank/length(Percentiles2.rank)*100)
+
+sq0 <- quantile(srm$TotalCount, c(.0))
+sq1 <- quantile(srm$TotalCount, c(.20))
+sq2 <- quantile(srm$TotalCount, c(.40))
+sq3 <- quantile(srm$TotalCount, c(.60))
+sq4 <- quantile(srm$TotalCount, c(.80))
+
+#Create percentile rank column
+srm <- srm%>%
+  mutate(
+    percentilerank = case_when(
+      percentiles2 >= sq0 & percentiles2 < sq1 ~ "low",
+      percentiles2 >= sq1 & percentiles2 < sq2 ~ "low/moderate",
+      percentiles2 >= sq2 & percentiles2 < sq3 ~ "moderate",
+      percentiles2 >= sq3 & percentiles2 < sq4 ~ "moderate/high",
+      percentiles2 >= sq4 ~ "high",
+  
+    )
+  )
+
+
+#Pull out percentile rank of proforma row from newmaster
+srmproforma <- proforma
+
+srmproforma$percentiles <- ecdf(srm$TotalCount)(srmproforma$TotalCount)*100
+srmproforma$percentileswhole <- lapply(srmproforma$percentiles, as.integer)
+
+Percentiles2 <- srmproforma$TotalCount
+Percentiles2.rank <- rank(Percentiles2, ties.method="min")
+srmproforma$percentiles2 <- round(Percentiles2.rank/length(Percentiles2.rank)*100)
+
+srmproforma <- srmproforma%>%
+  mutate(
+    percentilerank = case_when(
+      percentilessub >= q0 & percentilessub < q1 ~ "low",
+      percentilessub >= q1 & percentilessub < q2 ~ "low/moderate",
+      percentilessub >= q2 & percentilessub < q3 ~ "moderate",
+      percentilessub >= q3 & percentilessub < q4 ~ "moderate/high",
+      percentilessub >= q4 ~ "high",
+  
+    )
+  )
+
+#make a column listing the refrange
+ps$refrange <- nrow(ps)
+
+#make column in proforma of percentile when using this subset
+
+
+
+
+```
+
+Your roost is the **`r srmproforma$percentileswhole`th percentile** when compared to the **`r unique(srm$refrange)`** bat roosts in the dataset. This means your roost is ranked as a **`r srmproforma$percentilerank`** number of bats.
+
+```{r}
+
+ggplot(structureregionmonth, aes(x="TotalCount", y=TotalCount))+geom_boxplot()+
+  geom_point(
+    data=proforma,
+    aes(x="TotalCount", y=TotalCount), 
+    color="red", size=5
+  )
+
+
+```
+
+# Figure 5: 
+A boxplot showing the proforma total count against other roots of the same species, structure type, region and season. 
+
+```{r}
+
+ggplot(srm, aes(x="percentiles", y=percentiles))+geom_boxplot()+
+  geom_point(
+    data=srmproforma,
+    aes(x="percentiles", y=percentiles), 
+    color="red", size=5
+  )
+
+
+```
+
+```{r}
+
+#FINAL COMMAND OF REPORT NEEDS TO BE SAVING NEWMASTER AS THE MASTER
+#CAREFUL WITH DOING THIS NOW BECAUSE THEN PROFORMA WILL BE DOUBLED WHEN RETESTING
+#BECAUSE WILL BE SAVED IN MASTER.
+
+#write.csv(newmaster, "./master.csv", row.names = FALSE)
+
+
+```
+
+
+### Appendix 1
+This will explain why counts of 0 have not been included in the main report and will repeat some of the key data - maybe all of it, with 0s included. 
+
+
+
+
+**Thank you for using the Ecobat Roost Analysis! If you have any questions please email info@themammalsociety.org**
+
+
+
+
+
