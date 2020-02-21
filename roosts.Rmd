@@ -22,6 +22,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, comment = 
 ```{r libraries}
 
 #copied and pased from Ecobat nightly
+library(rsconnect)
 library(rmarkdown)
 library(ggplot2)
 library(knitr)
@@ -37,20 +38,20 @@ library(magrittr) #piping
 library(tidyverse)
 library(rdrop2)
 
-#When testing unhash this
+
+#stuff to unhash when testing rds file
 #drop_auth(rdstoken = "droptoken.rds")
 #drop_acc()
+
+#proforma <- read.csv("proforma.csv", header = TRUE)
+#master <- drop_read_csv("roosts/master.csv", header = TRUE)
 
 ```
 
 
 ```{r}
 
-#When working from RMD use these to load proforma and master, hash out when done
-#proforma <- read.csv("proforma.csv", header = TRUE)
-#master <- drop_read_csv("roosts/master.csv")
-
-#When working from Shiny app use these to load proforma and master, hash out when in RMD
+#Unhash when running from server
 proforma <- params$n #this works from desktop
 master <- params$m
 
@@ -139,7 +140,7 @@ prebreedingmax <- prebreeding %>%
   group_by(gridref, Species, year) %>%
   summarise(max = max(TotalCount))
 
-#take the median count for each location
+#take the median count for each location - if this stops working, probably because only one obs for prebreedingmax, last time seemed to be linked to the master saved on dropbox - if you replace this then it seems to work again.
 prebreedingmedian <- prebreedingmax %>%
   group_by(gridref, Species) %>%
   summarise(median = median(max))
@@ -430,9 +431,8 @@ A boxplot showing where your data lies in relation to all other roost data (left
 
 ```{r}
 #upload new master into dropbox to replace master - need to make sure it overwrites current master when it does this.
-write.csv(newmaster, "master.csv")
-#drop_delete("roosts/master.csv")
-drop_upload("master.csv", path = "roosts")
+#write.csv(newmaster, "master.csv")
+#drop_upload("master.csv", path = "roosts")
 
 ```
 

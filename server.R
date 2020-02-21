@@ -1,4 +1,5 @@
 #load packages - not sure if necessary
+library(rsconnect)
 library(shiny) 
 library(rmarkdown) 
 library(ggplot2)
@@ -11,6 +12,7 @@ library(suncalc)
 library(ggforce)
 library(janitor)
 library(rdrop2)
+
 
 #connect to the dropbox account
 drop_auth(rdstoken = "droptoken.rds")

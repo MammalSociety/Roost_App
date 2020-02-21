@@ -1,4 +1,5 @@
 #load packages - not sure if necessary
+library(rsconnect)
 library(shiny)
 library(rmarkdown) 
 library(ggplot2)
