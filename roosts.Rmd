@@ -137,22 +137,22 @@ postbreeding <- alldatanozeros %>%
 #Want peak count within year and median count across years
 #get highest count for each year
 prebreedingmax <- prebreeding %>%
-  group_by(gridref, Species, year) %>%
-  summarise(max = max(TotalCount))
+  dplyr::group_by(gridref, Species, year) %>%
+  dplyr::summarise(max = max(TotalCount))
 
 #take the median count for each location - if this stops working, probably because only one obs for prebreedingmax, last time seemed to be linked to the master saved on dropbox - if you replace this then it seems to work again.
 prebreedingmedian <- prebreedingmax %>%
-  group_by(gridref, Species) %>%
-  summarise(median = median(max))
+  dplyr::group_by(gridref, Species) %>%
+  dplyr::summarise(median = median(max))
 
 #do same for postbreeding data
 postbreedingmax <- postbreeding %>%
-  group_by(gridref, Species, year) %>%
-  summarise(max = max(TotalCount))
+  dplyr::group_by(gridref, Species, year) %>%
+  dplyr::summarise(max = max(TotalCount))
 
 postbreedingmedian <- postbreedingmax %>%
-  group_by(gridref, Species) %>%
-  summarise(median = median(max))
+  dplyr::group_by(gridref, Species) %>%
+  dplyr::summarise(median = median(max))
 
 ```
 
@@ -208,7 +208,7 @@ if(proforma$month == 1 | 2 | 3 | 5 | 6) {
 ```
 
 ### Figure 1:
-A boxplot of where your TotalCount sits in relation to all the roost counts in the database. The lower line of the box is the lower quartile value and the top line of the box is the upper quartile. The median is the horizobntal black line in the box. The black dots are outliers and the red dot is your roost count of `r proforma$TotalCount`
+A boxplot of where your Total Count sits in relation to all the roost counts in the database. The lower line of the box is the lower quartile value and the top line of the box is the upper quartile. The median is the horizobntal black line in the box. The black dots are outliers and the red dot is your roost count of `r proforma$TotalCount`
 On the right is  a subset of the roost data contained in the database. If your roost count was recorded in the months of January and June OR you selected 'No' in the column asking if you think babies are flying then this will be all the prebreeding data (Jan - Jun or where answer to this question was negative.) If you answered Yes or your data was recorded July - August, you will see a subset of post breeding data. Your data is the red dot. 
 
 
@@ -390,10 +390,10 @@ proforma <- proforma%>%
 
 This analysis looks at the relative size of the bat roost you recorded. We take your total count of bats at the roost recorded and compare this to values in our reference database. We tell you what percentile your data falls at, and therefore what the relative activity level is. 
 
-Roosts in the database are ranked based on their percentile score into a **low, low/moderate, moderate, moderate/high** and **high** number of bats in a roost. 
+Roosts in the database are ranked based on their percentile score into a **low, low/moderate, moderate, moderate/high, high** and **exceptional** number of bats in a roost. 
 
 *All data**
-Your roost is the **`r proforma$percentileswhole`th percentile** when compared to the **`r unique(alldatapercentiles$refrange)`** bat roosts in the dataset. This means your roost is ranked as a **`r proforma$percentilerank`** number of bats.
+Your roost is the **`r proforma$percentileswholeall` th percentile** when compared to the **`r unique(alldatapercentiles$refrange)`** bat roosts in the dataset. This means your roost is ranked as a **`r proforma$percentilerankall`** number of bats.
 
 **Breeding subset**
 This compares your data to a subet of the Ecobat roost data based on the time of year your count was recorded and so whether your roost was recorded pre- or post- young bats flying. If your roost count was recorded in **January - June** OR you selected **no** in the proforma column Do you think young are flying? then your data is compared to our prebreeding data (January to June). 
@@ -425,6 +425,7 @@ ggplot(ps, aes(x="percentiles", y=percentilessub))+geom_boxplot()+
 
 
 ```
+
 ### Figure 4: 
 A boxplot showing where your data lies in relation to all other roost data (left) and a boxplot showing where your data lies in relation to a subset of data based on month of recording and whether you think young bats are flying (right). Values are the percentile values. 
 

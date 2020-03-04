@@ -5,9 +5,9 @@ account: ecobat
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1844181
-bundleId: 2817965
+bundleId: 2850162
 url: https://ecobat.shinyapps.io/Roost_App/
-when: 1582291100.56704
+when: 1583324299.1013
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: Ecobat Roost Report 20Feb2020.docx|master.csv|proforma.csv|weblinks.txt|oldstuff/BatRoostAnalysis1.R|oldstuff/roosts1.Rmd|oldstuff/server.R|oldstuff/test2.Rmd|oldstuff/ui.R
+ignoredFiles: Ecobat Roost Report 02Mar2020.docx|Ecobat Roost Report 20Feb2020.docx|master.csv|proforma.csv|weblinks.txt|oldstuff/BatRoostAnalysis1.R|oldstuff/roosts1.Rmd|oldstuff/server.R|oldstuff/test2.Rmd|oldstuff/ui.R
